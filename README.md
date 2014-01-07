@@ -8,3 +8,4 @@ This repository contains the following files:
 - [loop.c](loop.c) A C program implementing two simple algorithms to check weather a linked list ends in a loop, together with functions for creating, printing, and freeing lists.
 - [chomp.py](chomp.py) Object-oriented 2d chomp implementation using a general poset game engine.
 - [chomp-cell.png](chomp-cell.png) White chocolate block image for [chomp.py](chomp.py).
+- [fibonacci.py](fibonacci.py) Five different functions to calculate Fibonacci numbers.
