@@ -9,3 +9,4 @@ This repository contains the following files:
 - [chomp.py](chomp.py) Object-oriented 2d chomp implementation using a general poset game engine.
 - [chomp-cell.png](chomp-cell.png) White chocolate block image for [chomp.py](chomp.py).
 - [fibonacci.py](fibonacci.py) Five different functions to calculate Fibonacci numbers.
+- [cyclicsortedfindmax.py](cyclicsortedfindmax.py) Find maximum element in the cyclic permutation of a sorted array.
