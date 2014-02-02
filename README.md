@@ -9,3 +9,4 @@ This repository contains the following files:
 - [chomp.py](chomp.py) Object-oriented 2d chomp implementation using a general poset game engine.
 - [chomp-cell.png](chomp-cell.png) White chocolate block image for [chomp.py](chomp.py).
 - [fibonacci.py](fibonacci.py) Five different functions to calculate Fibonacci numbers.
+- [random7.c](random7.c) Generate uniform discrete random variable on {0, 1, 2, 3, 4, 5, 6} given a sequence of those on {0, 1, 2, 3, 4}.
