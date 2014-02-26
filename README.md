@@ -12,3 +12,4 @@ This repository contains the following files:
 - [cyclicsortedfindmax.py](cyclicsortedfindmax.py) Find maximum element in the cyclic permutation of a sorted array.
 - [random7.c](random7.c) Generate uniform discrete random variable on {0, 1, 2, 3, 4, 5, 6} given a sequence of those on {0, 1, 2, 3, 4}.
 - [parkinglot.cxx](parkinglot.cxx) An object-oriented parking lot.
+- [queue.c](queue.c) Queue implemented in C, with struct, not object-oriented.
