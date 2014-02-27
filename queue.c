@@ -44,6 +44,10 @@ int dequeue(struct queue * q) {
   return element;
 }
 
+void queueFree(struct queue * q) {
+  free(q->array);
+}
+
 int main() {
   struct queue q;
   queueInit(&q, 4);
@@ -67,5 +71,6 @@ int main() {
   enqueue(&q, 9);
   printf("%d\n", dequeue(&q));
   printf("%d\n", dequeue(&q));
+  queueFree(&q);
   return 0;
 }
