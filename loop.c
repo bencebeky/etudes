@@ -45,14 +45,14 @@ struct link *create_list_dead() {
     return NULL;
   i=0;
   // Create the first node, the head.
-  head = malloc(sizeof (void*));
+  head = malloc(sizeof (struct link));
   head->label = i;
   node = head;
   // Create more nodes with Poisson distribution,
   // label them incrementally.
   while(random() < 0.6*RAND_MAX) {
     i++;
-    node->next = malloc(sizeof (void*));
+    node->next = malloc(sizeof (struct link));
     node = node->next;
     node->label = i;
   }
@@ -69,7 +69,7 @@ struct link *create_list_loop() {
   struct link *head, *node, *joint;
   // Create the head node.
   i=0;
-  head = malloc(sizeof (void*));
+  head = malloc(sizeof (struct link));
   head->label = i;
   node = head;
   srand(time(NULL));
@@ -77,7 +77,7 @@ struct link *create_list_loop() {
   // to which we will loop back.
   while(random() < 0.6*RAND_MAX) {
     i++;
-    node->next = malloc(sizeof (void*));
+    node->next = malloc(sizeof (struct link));
     node = node->next;
     node->label = i;
   }
@@ -86,7 +86,7 @@ struct link *create_list_loop() {
   // Possibly create more nodes after.
   while(random() < 0.6*RAND_MAX) {
     i++;
-    node->next = malloc(sizeof (void*));
+    node->next = malloc(sizeof (struct link));
     node = node->next;
     node->label = i;
   }
