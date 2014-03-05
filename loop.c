@@ -39,7 +39,6 @@ struct link {
 struct link *create_list_dead() {
   int i;
   struct link *head, *node;
-  srand(time(NULL));
   // Maybe the list has zero nodes.
   if (random() > 0.6*RAND_MAX)
     return NULL;
@@ -72,7 +71,6 @@ struct link *create_list_loop() {
   head = malloc(sizeof (struct link));
   head->label = i;
   node = head;
-  srand(time(NULL));
   // Possibly create some nodes before we get to the one
   // to which we will loop back.
   while(random() < 0.6*RAND_MAX) {
@@ -199,6 +197,9 @@ void free_list(struct link *head) {
 // This is the main function.
 int main() {
   struct link *head;
+  // Set random seed from time.  Note that program still yields the same
+  // result if you execute if multiple times with the same second.
+  srand(time(NULL));
   // First we create a list that deadends, print it, and test it
   // with both algorithms.
   head = create_list_dead();
