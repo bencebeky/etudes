@@ -13,10 +13,14 @@ class lot {
     lot(int n);
     ~lot();
     void print();
-    int park(vehicle*, bool);
-    int leave(vehicle*, bool);
+    int park(vehicle*);
+    int leave(vehicle*);
+    void setVerbose(bool verbose) {
+      verbose_ = verbose;
+    }
   private:
     spot *first;
+    bool verbose_;
 };
 
 class spot {
@@ -83,27 +87,27 @@ void lot::print() {
   cout << endl;
 }
 
-int lot::park(vehicle *v, bool verbose) {
+int lot::park(vehicle *v) {
   spot *s;
   for(s = first; s != NULL; s = s->getNext())
     if (s->park(v)) {
-      if(verbose)
+      if(verbose_)
         cout << "Successfully parked " << v->getDescription() << "." << endl;
       return true;
     }
-  if(verbose)
+  if(verbose_)
     cout << "Failed to park " << v->getDescription() << "." << endl;
   return false;
 }
 
-int lot::leave(vehicle *v, bool verbose) {
+int lot::leave(vehicle *v) {
   spot *s;
   int retval;
   std::string description = v->getDescription();
   for(s = first; s != NULL; s = s->getNext()) {
     if((s->getVehicle() != NULL) && (v->getDescription().compare(s->getVehicle()->getDescription()) == 0)) {
       retval = s->leave();
-      if(verbose) {
+      if(verbose_) {
         if(retval)
           cout << description << " successfully left." << endl;
         else
@@ -112,7 +116,7 @@ int lot::leave(vehicle *v, bool verbose) {
       return retval;
     }
   }
-  if(verbose)
+  if(verbose_)
     cout << v->getDescription() << " not found in the parking lot." << endl;
   return false;
 }
@@ -169,43 +173,44 @@ std::string vehicle::getDescription() {
 
 int main() {
   lot *myLot = new lot(3);
+  myLot->setVerbose(true);
   vehicle *v1 = new vehicle("Prius");
   vehicle *v2 = new vehicle("Insight");
   vehicle *v3 = new vehicle("Leaf");
   myLot->print();
-  myLot->park(v1, true);
+  myLot->park(v1);
   myLot->print();
-  myLot->park(v2, true);
+  myLot->park(v2);
   myLot->print();
-  myLot->park(v3, true);
+  myLot->park(v3);
   myLot->print();
-  myLot->leave(v2, true);
+  myLot->leave(v2);
   myLot->print();
-  myLot->leave(v3, true);
+  myLot->leave(v3);
   myLot->print();
-  myLot->leave(v1, true);
+  myLot->leave(v1);
   myLot->print();
-  myLot->leave(v2, true);
+  myLot->leave(v2);
   myLot->print();
   delete myLot;
   myLot = new lot(1);
   myLot->print();
-  myLot->park(v1, true);
+  myLot->park(v1);
   myLot->print();
-  myLot->park(v2, true);
+  myLot->park(v2);
   myLot->print();
-  myLot->leave(v2, true);
+  myLot->leave(v2);
   myLot->print();
-  myLot->leave(v1, true);
+  myLot->leave(v1);
   myLot->print();
   delete myLot;
   myLot = new lot(0);
   myLot->print();
-  myLot->park(v1, true);
+  myLot->park(v1);
   myLot->print();
-  myLot->leave(v1, true);
+  myLot->leave(v1);
   myLot->print();
-  myLot->leave(v2, true);
+  myLot->leave(v2);
   myLot->print();
   delete myLot;
   return 0;
