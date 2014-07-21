@@ -1,6 +1,7 @@
 /* An object-oriented parking lot. */
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -19,7 +20,7 @@ class lot {
       verbose_ = verbose;
     }
   private:
-    spot *first;
+    vector<spot> spots;
     bool verbose_;
 };
 
@@ -29,84 +30,61 @@ class spot {
     ~spot();
     int park(vehicle*);
     int leave();
-    spot* getNext();
-    void setNext(spot*);
     vehicle* getVehicle();
   private:
-    spot *next;
     vehicle *v;
 };
 
 class vehicle {
   public:
     vehicle(std::string);
-    ~vehicle();
+    ~vehicle() {}
     std::string getDescription();
   private:
     std::string description;
 };
 
-lot::lot(int n) {
-  if(n==0) {
-    first = NULL;
-  } else {
-    int i;
-    spot *next, *curr;
-    first = new spot();
-    next = first;
-    for(i=1; i<n; i++) {
-      curr = next;
-      next = new spot();
-      curr->setNext(next);
-    }
-    next->setNext(NULL);
-  }
-}
+lot::lot(int n) : spots(n, spot()) {}
 
 lot::~lot() {
-  spot *curr, *next;
-  curr = first;
-  while (curr != NULL) {
-    next = curr->getNext();
-    delete curr;
-    curr = next;
+  for (vector<spot>::iterator it = spots.begin(); it != spots.end(); ++it) {
+    it->leave();
   }
 }
 
 void lot::print() {
-  int i;
-  spot *s;
-  for(i=0, s=first; s != NULL; s = s->getNext(), i++) {
-    if (s->getVehicle() == NULL)
-      cout << "Spot " << i << " empty; ";
-    else
-      cout << "Spot " << i << " has " << s->getVehicle()->getDescription() << "; ";
-  }
-  if (first==NULL)
+  if (spots.size() == 0) {
     cout << "Zero sized lot.";
+  } else {
+    for (int i = 0 ; i < spots.size() ; ++i) {
+      if (spots[i].getVehicle() == NULL)
+        cout << "Spot " << i << " empty; ";
+      else
+        cout << "Spot " << i << " has " << spots[i].getVehicle()->getDescription() << "; ";
+    }
+  }
   cout << endl;
 }
 
 int lot::park(vehicle *v) {
-  spot *s;
-  for(s = first; s != NULL; s = s->getNext())
-    if (s->park(v)) {
+  for (vector<spot>::iterator it = spots.begin(); it != spots.end(); ++it) {
+    if (it->park(v)) {
       if(verbose_)
         cout << "Successfully parked " << v->getDescription() << "." << endl;
       return true;
     }
+  }
   if(verbose_)
     cout << "Failed to park " << v->getDescription() << "." << endl;
   return false;
 }
 
 int lot::leave(vehicle *v) {
-  spot *s;
   int retval;
   std::string description = v->getDescription();
-  for(s = first; s != NULL; s = s->getNext()) {
-    if((s->getVehicle() != NULL) && (v->getDescription().compare(s->getVehicle()->getDescription()) == 0)) {
-      retval = s->leave();
+  for (vector<spot>::iterator it = spots.begin(); it != spots.end(); ++it) {
+    if((it->getVehicle() != NULL) && (v->getDescription().compare(it->getVehicle()->getDescription()) == 0)) {
+      retval = it->leave();
       if(verbose_) {
         if(retval)
           cout << description << " successfully left." << endl;
@@ -121,10 +99,7 @@ int lot::leave(vehicle *v) {
   return false;
 }
 
-spot::spot() {
-  v = NULL;
-  next = NULL;
-}
+spot::spot() : v(NULL) {}
 
 spot::~spot() {
   leave();
@@ -148,23 +123,12 @@ int spot::leave() {
   }
 }
 
-spot *spot::getNext() {
-  return next;
-}
-
-void spot::setNext(spot *newNext) {
-  next = newNext;
-}
-
 vehicle* spot::getVehicle() {
   return v;
 }
 
 vehicle::vehicle(std::string newdescription) {
   description = newdescription;
-}
-
-vehicle::~vehicle() {
 }
 
 std::string vehicle::getDescription() {
