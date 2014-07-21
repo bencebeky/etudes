@@ -26,20 +26,20 @@ class lot {
 
 class spot {
   public:
-    spot();
-    ~spot();
+    spot() : v(NULL) {}
+    ~spot() { leave(); }
     int park(vehicle*);
     int leave();
-    vehicle* getVehicle();
+    vehicle* getVehicle() { return v; }
   private:
     vehicle *v;
 };
 
 class vehicle {
   public:
-    vehicle(std::string);
+    vehicle(std::string newdescription) : description(newdescription) {}
     ~vehicle() {}
-    std::string getDescription();
+    std::string getDescription() { return description; }
   private:
     std::string description;
 };
@@ -99,12 +99,6 @@ int lot::leave(vehicle *v) {
   return false;
 }
 
-spot::spot() : v(NULL) {}
-
-spot::~spot() {
-  leave();
-}
-
 int spot::park(vehicle *newvehicle) {
   if (v == NULL) {
     v = newvehicle;
@@ -121,18 +115,6 @@ int spot::leave() {
   } else {
     return false;
   }
-}
-
-vehicle* spot::getVehicle() {
-  return v;
-}
-
-vehicle::vehicle(std::string newdescription) {
-  description = newdescription;
-}
-
-std::string vehicle::getDescription() {
-  return description;
 }
 
 int main() {
