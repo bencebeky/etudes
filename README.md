@@ -16,3 +16,4 @@ This repository contains the following files:
 - [queue.c](queue.c) Queue implemented in C, with struct, not object-oriented.
 - [catalan.cxx](catalan.cxx) Print all valid strings of nested parentheses up to some length.
 - [signal.c](signal.c) Minimal example of signal handling in C.
+- [lightsout.py](lightsout.py) Solver for lights out puzzle.
