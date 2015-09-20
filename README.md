@@ -17,3 +17,4 @@ This repository contains the following files:
 - [catalan.cxx](catalan.cxx) Print all valid strings of nested parentheses up to some length.
 - [signal.c](signal.c) Minimal example of signal handling in C.
 - [lightsout.py](lightsout.py) Solver for lights out puzzle.
+- [square1](square1) Solution guite to Square 1 puzzle.
