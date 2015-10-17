@@ -19,13 +19,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // any valid shape.
 
 #include <map>
+#include <string>
 #include <utility>
 
 // Side is the shape of a side, modulo rotation.
 // Side::Iterator is a side in a specific orientation.
 class Side {
  public:
-  Side(uint16_t side);
+  explicit Side(uint16_t side);
 
   class Iterator;
   using iterator = class Iterator;
@@ -67,6 +68,7 @@ class Shape {
   iterator begin();
 
   bool operator<(const Shape& other) const;
+  bool topheavy() const;
 
  private:
   // |top_| is top view, |bottom_| is bottom view.
@@ -80,8 +82,12 @@ class Solver {
 
   void solve();
   size_t number_of_shapes();
+  void save_solution(const std::string& filename);
 
  private:
-  using SolutionType = std::map<Shape, std::pair<size_t, Shape>>;
+  // Keyed by normalized shapes, |solution_| records the shortest distance to
+  // the solved shape (cube), along with the particular rotation of the shape
+  // for the first cut for one of the shortest paths.
+  using SolutionType = std::map<Shape, std::pair<size_t, Shape::iterator>>;
   SolutionType solution_;
 };

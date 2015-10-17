@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <queue>
 #include <utility>
@@ -29,19 +30,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using std::cout;
 using std::endl;
 using std::make_pair;
+using std::ofstream;
 using std::queue;
+using std::string;
 
 const uint16_t kSquare = 1 + 3*(2 + 3*(1 + 3*(2 + 3*(1 + 3*(2 + 3*(1 + 3*2))))));
 
 class Side::Iterator {
  public:
-  Iterator(Side side)
+  // Normalized rotation.
+  explicit Iterator(Side side)
     : normalized_(side),
       rotated_(normalized_.side_) {
     // This will end as long as all states were fed from the solved one.
     while(!can_cut()) {
       rotate_by_one_piece();
     }
+  }
+
+  // A specific rotation.
+  explicit Iterator(uint16_t side)
+    : normalized_(side),
+      rotated_(side) {
+    if(!can_cut())
+      cout << side << endl;
+    assert(can_cut());
+  }
+
+  Side side() const {
+    return normalized_;
   }
 
   Iterator& operator++() {
@@ -154,14 +171,26 @@ bool Side::is_fullcircle(uint16_t side) {
 
 // begin() == end(), because rotation is of finite order.
 Side::iterator Side::begin() {
-  return Iterator(side_);
+  return Iterator(*this);
 }
 
 class Shape::Iterator {
  public:
+  Iterator()
+    : top_(kSquare),
+      bottom_(kSquare),
+      rotated_top_(kSquare),
+      rotated_bottom_(kSquare) {}
+
   Iterator(Side top, Side bottom)
     : top_(top),
       bottom_(bottom),
+      rotated_top_(top),
+      rotated_bottom_(bottom) {};
+
+  Iterator(Side::iterator top, Side::iterator bottom)
+    : top_(top.side()),
+      bottom_(bottom.side()),
       rotated_top_(top),
       rotated_bottom_(bottom) {};
 
@@ -174,6 +203,18 @@ class Shape::Iterator {
     return *this;
   }
 
+  Shape shape() const {
+    return Shape(top_, bottom_);
+  }
+
+  Side::iterator rotated_top() const {
+    return rotated_top_;
+  }
+
+  Side::iterator rotated_bottom() const {
+    return rotated_bottom_;
+  }
+
   bool operator==(const iterator& other) {
     return rotated_top_ == other.rotated_top_ && rotated_bottom_ ==
     other.rotated_bottom_;
@@ -184,7 +225,7 @@ class Shape::Iterator {
   }
 
   // Twist right side of the toy, thus swapping top and bottom right halves.
-  Shape cut() {
+  Iterator cut() {
     uint16_t top_right = rotated_top_.right();
     uint16_t top_left = rotated_top_.rotated_value() - top_right;
     while (top_left % 3 == 0) top_left /= 3;
@@ -196,7 +237,8 @@ class Shape::Iterator {
     top_left *= pow(3, Side::number_of_pieces(bottom_right));
     bottom_left *= pow(3, Side::number_of_pieces(top_right));
 
-    return Shape(top_left + bottom_right, bottom_left + top_right);
+    return Iterator(Side::iterator(top_left + bottom_right),
+                    Side::iterator(bottom_left + top_right));
   }
 
  private:
@@ -207,9 +249,7 @@ class Shape::Iterator {
 };
 
 Shape::Shape() : top_(kSquare), bottom_(kSquare) {}
-Shape::Shape(const Side& top, const Side& bottom)
-  : top_(top < bottom ? top : bottom),
-    bottom_(top < bottom ? bottom : top) {}
+Shape::Shape(const Side& top, const Side& bottom) : top_(top), bottom_(bottom) {};
 
 // begin() == end(), because rotation is of finite order.
 Shape::iterator Shape::begin() {
@@ -222,13 +262,17 @@ bool Shape::operator<(const Shape& other) const {
   return bottom_ < other.bottom_;
 }
 
+bool Shape::topheavy() const {
+  return !(top_ < bottom_);
+}
+
 Solver::Solver() {}
 
 void Solver::solve() {
   assert(solution_.empty());
   // Solved state is root of tree, at distance 0 from itself.
   Shape solved;
-  solution_[solved] = make_pair(0, solved);
+  solution_[solved] = make_pair(0, solved.begin());
   // Breadth first search with recording distance.
   queue<Shape> Q;
   Q.push(solved);
@@ -238,12 +282,13 @@ void Solver::solve() {
     size_t distance = solution_[state].first;
     Shape::iterator rotated = state.begin();
     do {
-      Shape new_state = rotated.cut();
+      Shape::iterator new_rotation = rotated.cut();
+      Shape new_state = new_rotation.shape();
       // In fact, the graph is not a tree, skip already visited states.
-      if (solution_.count(new_state) == 0) {
+      if (new_state.topheavy() && solution_.count(new_state) == 0) {
         cout << "New state found at distance " << distance+1 << "." << endl;
         Q.push(new_state);
-        solution_[new_state] = make_pair(distance+1, state);
+        solution_[new_state] = make_pair(distance+1, new_rotation);
       }
       ++rotated;
     } while (rotated != state.begin());
@@ -254,8 +299,19 @@ size_t Solver::number_of_shapes() {
   return solution_.size();
 }
 
+void Solver::save_solution(const string& filename) {
+  ofstream file;
+  file.open(filename);
+  for (const auto& value : solution_) {
+    file << value.second.second.rotated_top().rotated_value() << " "
+         << value.second.second.rotated_bottom().rotated_value() << endl;
+  }
+  file.close();
+}
+
 int main() {
   Solver solver;
   solver.solve();
   cout << "Total number of shapes: " << solver.number_of_shapes() << endl;
+  solver.save_solution("solution.dat");
 }
