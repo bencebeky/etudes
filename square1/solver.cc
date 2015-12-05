@@ -29,7 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using std::cout;
 using std::endl;
-using std::make_pair;
+using std::get;
+using std::make_tuple;
 using std::ofstream;
 using std::queue;
 using std::string;
@@ -128,10 +129,6 @@ Side::Side(uint16_t side)
 
 bool Side::operator<(const Side& other) const {
   return side_ < other.side_;
-}
-
-uint16_t Side::value() {
-  return side_;
 }
 
 // static
@@ -270,25 +267,27 @@ Solver::Solver() {}
 
 void Solver::solve() {
   assert(solution_.empty());
-  // Solved state is root of tree, at distance 0 from itself.
+  // Solved state is root of tree, at distance 0 from itself, and dummy Shapes.
   Shape solved;
-  solution_[solved] = make_pair(0, solved.begin());
+  solution_[solved] = make_tuple(0, solved.begin(), solved);
   // Breadth first search with recording distance.
   queue<Shape> Q;
   Q.push(solved);
   while (!Q.empty()) {
     Shape state = Q.front();
     Q.pop();
-    size_t distance = solution_[state].first;
+    size_t distance = get<0>(solution_[state]);
     Shape::iterator rotated = state.begin();
     do {
       Shape::iterator new_rotation = rotated.cut();
       Shape new_state = new_rotation.shape();
-      // In fact, the graph is not a tree, skip already visited states.
+      // In fact, the graph is not a tree, skip already visited states.  Also,
+      // only consider topheavy states.  Each new_state turns up upside down as
+      // well, after a 180 degree rotation of both the top and bottom side.
       if (new_state.topheavy() && solution_.count(new_state) == 0) {
         cout << "New state found at distance " << distance+1 << "." << endl;
         Q.push(new_state);
-        solution_[new_state] = make_pair(distance+1, new_rotation);
+        solution_[new_state] = make_tuple(distance+1, new_rotation, state);
       }
       ++rotated;
     } while (rotated != state.begin());
@@ -303,8 +302,12 @@ void Solver::save_solution(const string& filename) {
   ofstream file;
   file.open(filename);
   for (const auto& value : solution_) {
-    file << value.second.second.rotated_top().rotated_value() << " "
-         << value.second.second.rotated_bottom().rotated_value() << endl;
+    file << value.first.top_value() << " "
+         << value.first.bottom_value() << " "
+         << get<1>(value.second).rotated_top().rotated_value() << " "
+         << get<1>(value.second).rotated_bottom().rotated_value() << " "
+         << get<2>(value.second).top_value() << " "
+         << get<2>(value.second).bottom_value() << endl;
   }
   file.close();
 }

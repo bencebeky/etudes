@@ -35,7 +35,7 @@ class Side {
 
   bool operator<(const Side& other) const;
 
-  uint16_t value();
+  uint16_t value() const { return side_; }
   static uint8_t number_of_pieces(uint16_t side);
 
  private:
@@ -69,6 +69,8 @@ class Shape {
 
   bool operator<(const Shape& other) const;
   bool topheavy() const;
+  uint16_t top_value() const { return top_.value(); };
+  uint16_t bottom_value() const { return bottom_.value(); };
 
  private:
   // |top_| is top view, |bottom_| is bottom view.
@@ -86,8 +88,8 @@ class Solver {
 
  private:
   // Keyed by normalized shapes, |solution_| records the shortest distance to
-  // the solved shape (cube), along with the particular rotation of the shape
-  // for the first cut for one of the shortest paths.
-  using SolutionType = std::map<Shape, std::pair<size_t, Shape::iterator>>;
+  // the solved shape (cube), the particular rotation of the shape for the first
+  // cut for one of the shortest paths, and the resulting shape.
+  using SolutionType = std::map<Shape, std::tuple<size_t, Shape::iterator, Shape>>;
   SolutionType solution_;
 };
