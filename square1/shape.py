@@ -21,88 +21,113 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
 from matplotlib import lines
+from matplotlib import gridspec
 from matplotlib import patches
 from matplotlib import pyplot
 from matplotlib.backends.backend_pdf import PdfPages
 from sys import argv
 
 pyplot.interactive(False)
-fig = pyplot.figure(figsize=[6,6], facecolor="white")
 
-def drawline(fig, data):
-  fig.lines.extend([patches.Polygon(0.5 + 0.5 * numpy.array(data).T,
-    transform=fig.transFigure, figure=fig, facecolor="grey", edgecolor="black", linewidth=4)])
+# Transform a line segment from the coordinate system of a single side to the
+# coordinate system of the subplot.
+def drawline(ax, voffset, data):
+  data = numpy.array(data).T
+  data[:,1] += 2 * voffset
+  ax.lines.extend([patches.Polygon(0.5 + 0.5 * data,
+    transform=ax.transAxes, facecolor="grey", edgecolor="black", linewidth=1.5)])
 
-def drawshape(arg):
+# Draw a single side at given vertical offset.
+def drawshape(ax, side, voffset):
   angle = 0.0
   short = numpy.sqrt(0.5) / numpy.cos(numpy.pi/12)
-  for shape in arg:
+  while (side > 0):
+    assert(side % 3 != 0);
     angle1 = angle + numpy.pi / 6;
     angle2 = angle + numpy.pi / 3;
-    if (shape == "1"):
-      drawline(fig, [[0.0, short * numpy.sin(angle), short * numpy.sin(angle1)],
-                     [0.0, short * numpy.cos(angle), short * numpy.cos(angle1)]])
+    if (side % 3 == 1):
+      drawline(ax, voffset,
+        [[0.0, short * numpy.sin(angle), short * numpy.sin(angle1)],
+         [0.0, + short * numpy.cos(angle), short * numpy.cos(angle1)]])
       angle = angle1
+    else:
+      drawline(ax, voffset,
+        [[0.0, short * numpy.sin(angle), numpy.sin(angle1), short * numpy.sin(angle2)],
+         [0.0, short * numpy.cos(angle), numpy.cos(angle1), short * numpy.cos(angle2)]])
+      angle = angle2
+    side //= 3;
+
+# Draw two sides in given subplot.
+def drawshapes(ax, shapes):
+  ax.set_axis_off()
+  ax.set_aspect(1.0)
+  drawshape(ax, shapes[0], 0.0)
+  drawshape(ax, shapes[1], 1.0)
+  ax.lines.extend([lines.Line2D([0.5, 0.5], [0.0, 2.0], transform=ax.transAxes, linewidth=1.5)])
+
+# Read solution file and generate |firststep|.  For each shape, |firststep|
+# contains the first step to take on one of the shortest paths to the root.
+def read_firststep():
+  firststep = {}
+  with open("solution.dat") as f:
+    for line in f:
+      words = line.split();
+      assert(len(words) == 6)
+      firststep[(int(words[0]), int(words[1]))] = [
+          (int(words[2]), int(words[3])),
+          (int(words[4]), int(words[5]))]
+  return firststep
+
+# Generate maximal list of suffix-free paths.
+def generate_suffixfree(firststep):
+  # |paths| is the list of all paths from all shapes to one step before the root.
+  paths = []
+
+  for shape in firststep.keys():
+    if (shape == (4100, 4100)):
       continue
-    drawline(fig,
-      [[0.0, short * numpy.sin(angle), numpy.sin(angle1), short * numpy.sin(angle2)],
-       [0.0, short * numpy.cos(angle), numpy.cos(angle1), short * numpy.cos(angle2)]])
-    angle = angle2
-  fig.lines.extend([lines.Line2D([0.5, 0.5], [0.0, 1.0],
-  transform=fig.transFigure, figure=fig, linewidth=4)])
-  pyplot.savefig(arg+".png")
+    path = []
+    while shape != (4100, 4100):
+      rotated, shape = firststep[shape]
+      path.append(rotated)
+    paths.append(path)
 
-# For each shape, |firststep| contains the first step to take on one of the
-# shortest paths to the root.
-firststep = {}
+  # |suffixfree| is the suffix-free union of |paths|
+  suffixfree = []
 
-with open("solution.dat") as f:
-  for line in f:
-    words = line.split();
-    assert(len(words) == 6)
-    firststep[(int(words[0]), int(words[1]))] = [
-        (int(words[2]), int(words[3])),
-        (int(words[4]), int(words[5]))]
+  for path in paths:
+    is_a_suffix = False
+    for otherpath in paths:
+      if (len(otherpath) <= len(path)):
+        continue
+      if (otherpath[-len(path):] == path):
+        is_a_suffix = True
+        break
+    if (not is_a_suffix):
+      suffixfree.append(path)
 
-# |paths| is the list of all paths from all shapes to one step before the root.
-paths = []
+  # Sort in place.
+  suffixfree.sort(key=len)
 
-for shape in firststep.keys():
-  if (shape == (4100, 4100)):
-    continue
-  path = []
-  while shape != (4100, 4100):
-    path.append(shape)
-    unused, shape = firststep[shape]
-  paths.append(path)
+  return suffixfree
 
-# |suffixfree| is the suffix-free union of |paths|
-suffixfree = []
+def plot(suffixfree):
+  rows = 6
+  columns = max([len(path) for path in suffixfree])
+  pdf = PdfPages("solution.pdf")
+  for pagenumber in range(int(numpy.ceil(len(suffixfree)/rows))):
+    fig = pyplot.figure(figsize=(8.27,11.69))
+    gs = gridspec.GridSpec(rows, columns, top=0.95, bottom=0.0, wspace=0.2, hspace=0.0)
+    for row in range(min(rows, len(suffixfree) - rows*pagenumber)):
+      path = suffixfree[rows*pagenumber + row]
+      for column in range(len(path)):
+        ax = fig.add_subplot(gs[row, column])
+        drawshapes(ax, path[column])
+    pdf.savefig()
+    pyplot.close(fig)
+  pdf.close()
 
-for path in paths:
-  is_a_suffix = False
-  for otherpath in paths:
-    if (len(otherpath) <= len(path)):
-      continue
-    if (otherpath[-len(path):] == path):
-      is_a_suffix = True
-      break
-  if (not is_a_suffix):
-    suffixfree.append(path)
 
-# Sort in place.
-suffixfree.sort(key=len)
-
-rows = 7
-columns = max([len(path) for path in suffixfree])
-pdf = PdfPages('solution.pdf')
-for pagenumber in range(len(suffixfree)//rows):
-  pyplot.figure(figsize=(11.69,8.27))
-  for row in range(min(rows, len(suffixfree) - rows*pagenumber)):
-    path = suffixfree[rows*pagenumber + row]
-    for column in range(len(path)):
-      pyplot.subplot(rows, columns, columns * row + column + 1)
-      pyplot.plot([0,1],[0,1])
-  pdf.savefig(papertype="a4", orientation="portrait")
-  pyplot.close()
-pdf.close()
+firststep = read_firststep()
+suffixfree = generate_suffixfree(firststep)
+plot(suffixfree)
