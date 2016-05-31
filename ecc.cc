@@ -112,3 +112,77 @@ int main() {
   }
   return 0;
 }
+
+#include <iostream>
+
+#include <gmp.h>
+
+using std::cout;
+using std::endl;
+
+void invert(mpz_t i, mpz_t b, mpz_t p) {
+  if (mpz_cmp_ui(b, 1) == 0) {
+    mpz_set_ui(i, 1);
+    return;
+  }
+  mpz_t q;
+  mpz_init(q);
+  mpz_t a;
+  mpz_init(a);
+  mpz_fdiv_qr(q, a, p, b);
+  mpz_t s0;
+  mpz_init(s0);
+  mpz_neg(s0, q);
+  mpz_t s1;
+  mpz_init_set_ui(s1, 1);
+  mpz_t s2;
+  mpz_init(s2);
+  mpz_t tmp;
+  mpz_init(tmp);
+  while (mpz_cmp_ui(a, 1) != 0) {
+    mpz_fdiv_qr(q, b, b, a);
+    mpz_set(s2, s1);
+    mpz_set(s1, s0);
+    mpz_mul(tmp, q, s1);
+    mpz_sub(s0, s2, tmp);
+    if (mpz_cmp_ui(b, 1) == 0) {
+      mpz_fdiv_r(i, s0, p);
+      return;
+    }
+    mpz_fdiv_qr(q, a, a, b);
+    mpz_set(s2, s1);
+    mpz_set(s1, s0);
+    mpz_mul(tmp, q, s1);
+    mpz_sub(s0, s2, tmp);
+  }
+  mpz_fdiv_r(i, s0, p);
+}
+
+int main() {
+  mpz_t p;
+  mpz_init_set_ui(p, 997);
+  bool pass = true;
+  mpz_t inverse;
+  mpz_init(inverse);
+  mpz_t prod;
+  mpz_init(prod);
+  mpz_t r;
+  mpz_init(r);
+  for (int i = 1; i < 997; ++i) {
+    mpz_t mpzi;
+    mpz_init_set_ui(mpzi, i);
+    invert(inverse, mpzi, p);
+    mpz_mul(prod, inverse, mpzi);
+    mpz_fdiv_r(r, prod, p);
+    if (mpz_cmp_ui(r, 1) != 0) {
+      cout << "iteration " << i << " fail" << endl;
+      pass = false;
+    }
+  }
+  if (pass) {
+    cout << "PASS Inversion." << endl;
+  } else {
+    cout << "FAIL Inversion." << endl;
+  }
+  return 0;
+}
