@@ -41,13 +41,11 @@ solution = 1387 56822DD5 FB093766
 using std::cout;
 using std::endl;
 
-// This class can hold a large prime p, as well as elements of the finite field
-// of order p.  In the latter case, values should be in [0, p), but this is not
-// enforced.
+// Large unsigned number.  No bounds/overflow check.
 class Number {
  public:
   Number() = default;
-  explicit Number(int value) : value_(value) {}
+  explicit Number(uint64_t value) : value_(value) {}
 
   bool operator==(const Number& other) {
     return value_ == other.value_;
@@ -61,18 +59,33 @@ class Number {
     return value_ >= other.value_;
   }
 
-  static Number negate(Number a, Number p) {
-    if (a.value_ == 0)
-      return a;
-    return Number(p.value_ - a.value_);
+  Number& operator+=(const Number& other) {
+    value_ += other.value_;
+    return *this;
   }
 
-  static Number add(Number a, Number b, Number p) {
-    int sum = a.value_ + b.value_;
-    if (sum >= p.value_) sum -= p.value_;
-    return Number(sum);
+  friend Number operator+(Number lhs, const Number& rhs) {
+    lhs += rhs;
+    return lhs;
   }
 
+  // Warning: no underflow check.
+  Number& operator-=(const Number& other) {
+    value_ -= other.value_;
+    return *this;
+  }
+
+  friend Number operator-(Number lhs, const Number& rhs) {
+    lhs -= rhs;
+    return lhs;
+  }
+
+  friend Number operator*(Number lhs, const Number& rhs) {
+    lhs.value_ *= rhs.value_;
+    return lhs;
+  }
+
+  // TODO Speed up.
   static Number mod(Number a, Number b) {
     while (a.value_ < 0) {
       a.value_ += b.value_;
@@ -83,8 +96,9 @@ class Number {
     return a;
   }
 
+  // TODO Speed up.
   static void divide(Number a, Number b, Number* quotient, Number* remainder) {
-    int q = 0;
+    uint64_t q = 0;
     while (a.value_ < 0) {
       a.value_ += b.value_;
       --q;
@@ -97,56 +111,96 @@ class Number {
     *remainder = Number(a);
   }
 
-  static Number multiply(Number a, Number b, Number p) {
-    return mod(Number(a.value_ * b.value_), p);
+ private:
+  uint64_t value_;
+};
+
+// An element of the finite field of order p, where p is prime.  Represented by
+// an integer value in [0, p).  Behavior is undefined for values outside this
+// interval.
+class Element {
+ public:
+  Element() = default;
+  explicit Element(uint64_t value) : value_(value) {}
+  explicit Element(Number value) : value_(value) {}
+
+  bool operator==(const Element& other) {
+    return value_ == other.value_;
   }
 
-  static Number invert(Number b, Number p) {
+  bool operator!=(const Element& other) {
+    return value_ != other.value_;
+  }
+
+  static Element negate(Element a, Number p) {
+    if (a == Element(0))
+      return a;
+    return Element(p - a.value_);
+  }
+
+  static Element add(Element a, Element b, Number p) {
+    Number sum = a.value_ + b.value_;
+    if (sum >= p) sum -= p;
+    return Element(sum);
+  }
+
+  static Element multiply(Element a, Element b, Number p) {
+    return Element(Number::mod(a.value_ * b.value_, p));
+  }
+
+  static Element invert(Element i, Number p) {
     const Number one(1);
-    if (b == one) return one;
-    Number a;
+    if (i.value_ == one) return Element(one);
+    Number a(i.value_);
+    Number b;
     Number q;
-    Number::divide(p, b, &q, &a);
-    Number s0 = Number::negate(q, p);
-    Number s1(one);
-    Number s2;
-    while (a != one) {
-      Number::divide(b, a, &q, &b);
-      s2 = s1;
-      s1 = s0;
-      s0 = mod(Number(s2.value_ - q.value_ * s1.value_), p);
-      if (b == one) {
-        return Number::mod(s0, p);
-      }
+    Number::divide(p, a, &q, &b);
+    Element s0 = Element::negate(Element(q), p);
+    Element s1(one);
+    Element s2;
+    while (b != one) {
       Number::divide(a, b, &q, &a);
       s2 = s1;
       s1 = s0;
-      s0 = mod(Number(s2.value_ - q.value_ * s1.value_), p);
+      s0 = Element::add(
+          s2, Element::negate(Element(Number::mod(q * s1.value_, p)), p), p);
+      if (a == one) {
+        return s0;
+      }
+      Number::divide(b, a, &q, &b);
+      s2 = s1;
+      s1 = s0;
+      s0 = Element::add(
+          s2, Element::negate(Element(Number::mod(q * s1.value_, p)), p), p);
     }
-    return Number::mod(s0, p);
+    return s0;
   }
 
+
  private:
-  int value_;
+  Number value_;
 };
 
 int main() {
-  if (Number::add(Number(12), Number(20), Number(23)) == Number(9)) {
+  if (Element::add(Element(12), Element(20), Number(23)) == Element(9)) {
     cout << "PASS Addition." << endl;
   } else  {
     cout << "FAIL Addition." << endl;
   }
-  if (Number::multiply(Number(8), Number(9), Number(23)) == Number(3)) {
+  if (Element::multiply(Element(8), Element(9), Number(23)) == Element(3)) {
     cout << "PASS Multiplication." << endl;
   } else  {
     cout << "FAIL Multiplication." << endl;
   }
-  const Number p(997);
-  const Number one(1);
-  int pass(0);
-  int fail(0);
-  for (Number i(one); i != Number(0); i = Number::add(i, one, p)) {
-    if (Number::multiply(Number::invert(i, p), i, p) == one) {
+  //const Number p(29311);
+  const Number p(100057);
+  //const Number p(15485863);
+  //const Number p(982451653);
+  const Element one(1);
+  uint64_t pass(0);
+  uint64_t fail(0);
+  for (Element i(one); i != Element(0); i = Element::add(i, one, p)) {
+    if (Element::multiply(Element::invert(i, p), i, p) == one) {
       ++pass;
     } else {
       ++fail;
