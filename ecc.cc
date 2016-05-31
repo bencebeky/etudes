@@ -41,148 +41,117 @@ solution = 1387 56822DD5 FB093766
 using std::cout;
 using std::endl;
 
-int add(int a, int b, int p) {
-  int c = a+b;
-  return c >= p ? c-p : c;
-}
+// This class can hold a large prime p, as well as elements of the finite field
+// of order p.  In the latter case, values should be in [0, p), but this is not
+// enforced.
+class Number {
+ public:
+  Number() = default;
+  explicit Number(int value) : value_(value) {}
 
-int mod(int a, int b, int* quot) {
-  int q = 0;
-  while (a<0) {
-    a += b;
-    --q;
+  bool operator==(const Number& other) {
+    return value_ == other.value_;
   }
-  while (a>=b) {
-    a -= b;
-    ++q;
+
+  bool operator!=(const Number& other) {
+    return value_ != other.value_;
   }
-  if (quot) *quot = q;
-  return a;
-}
 
-int multiply(int a, int b, int p) {
-  return mod(a*b, p, nullptr);
-}
+  bool operator>=(const Number& other) {
+    return value_ >= other.value_;
+  }
 
-int invert(int b, int p) {
-  if (b==1) return 1;
-  int q;
-  int a = mod(p, b, &q);
-  int s0 = -q;
-  int s1 = 1;
-  int s2;
-  while (a != 1) {
-    b = mod(b, a, &q);
-    s2 = s1;
-    s1 = s0;
-    s0 = s2 - q*s1;
-    if (b==1) {
-      return mod(s0, p, nullptr);
+  static Number negate(Number a, Number p) {
+    if (a.value_ == 0)
+      return a;
+    return Number(p.value_ - a.value_);
+  }
+
+  static Number add(Number a, Number b, Number p) {
+    int sum = a.value_ + b.value_;
+    if (sum >= p.value_) sum -= p.value_;
+    return Number(sum);
+  }
+
+  static Number mod(Number a, Number b) {
+    while (a.value_ < 0) {
+      a.value_ += b.value_;
     }
-    a = mod(a, b, &q);
-    s2 = s1;
-    s1 = s0;
-    s0 = s2 - q*s1;
+    while (a >= b) {
+      a.value_ -= b.value_;
+    }
+    return a;
   }
-  return mod(s0, p, nullptr);
-}
+
+  static void divide(Number a, Number b, Number* quotient, Number* remainder) {
+    int q = 0;
+    while (a.value_ < 0) {
+      a.value_ += b.value_;
+      --q;
+    }
+    while (a >= b) {
+      a.value_ -= b.value_;
+      ++q;
+    }
+    *quotient = Number(q);
+    *remainder = Number(a);
+  }
+
+  static Number multiply(Number a, Number b, Number p) {
+    return mod(Number(a.value_ * b.value_), p);
+  }
+
+  static Number invert(Number b, Number p) {
+    const Number one(1);
+    if (b == one) return one;
+    Number a;
+    Number q;
+    Number::divide(p, b, &q, &a);
+    Number s0 = Number::negate(q, p);
+    Number s1(one);
+    Number s2;
+    while (a != one) {
+      Number::divide(b, a, &q, &b);
+      s2 = s1;
+      s1 = s0;
+      s0 = mod(Number(s2.value_ - q.value_ * s1.value_), p);
+      if (b == one) {
+        return Number::mod(s0, p);
+      }
+      Number::divide(a, b, &q, &a);
+      s2 = s1;
+      s1 = s0;
+      s0 = mod(Number(s2.value_ - q.value_ * s1.value_), p);
+    }
+    return Number::mod(s0, p);
+  }
+
+ private:
+  int value_;
+};
 
 int main() {
-  if (add(12, 20, 23) == 9) {
+  if (Number::add(Number(12), Number(20), Number(23)) == Number(9)) {
     cout << "PASS Addition." << endl;
   } else  {
     cout << "FAIL Addition." << endl;
   }
-  if (multiply(8, 9, 23) == 3) {
+  if (Number::multiply(Number(8), Number(9), Number(23)) == Number(3)) {
     cout << "PASS Multiplication." << endl;
   } else  {
     cout << "FAIL Multiplication." << endl;
   }
-  int p = 997;
-  bool pass = true;
-  for (int i = 1; i < p; ++i) {
-    if (multiply(invert(i, p), i, p) != 1) {
-      pass = false;
+  const Number p(997);
+  const Number one(1);
+  int pass(0);
+  int fail(0);
+  for (Number i(one); i != Number(0); i = Number::add(i, one, p)) {
+    if (Number::multiply(Number::invert(i, p), i, p) == one) {
+      ++pass;
+    } else {
+      ++fail;
     }
   }
-  if (pass) {
-    cout << "PASS Inversion." << endl;
-  } else {
-    cout << "FAIL Inversion." << endl;
-  }
-  return 0;
-}
-
-#include <iostream>
-
-#include <gmp.h>
-
-using std::cout;
-using std::endl;
-
-void invert(mpz_t i, mpz_t b, mpz_t p) {
-  if (mpz_cmp_ui(b, 1) == 0) {
-    mpz_set_ui(i, 1);
-    return;
-  }
-  mpz_t q;
-  mpz_init(q);
-  mpz_t a;
-  mpz_init(a);
-  mpz_fdiv_qr(q, a, p, b);
-  mpz_t s0;
-  mpz_init(s0);
-  mpz_neg(s0, q);
-  mpz_t s1;
-  mpz_init_set_ui(s1, 1);
-  mpz_t s2;
-  mpz_init(s2);
-  mpz_t tmp;
-  mpz_init(tmp);
-  while (mpz_cmp_ui(a, 1) != 0) {
-    mpz_fdiv_qr(q, b, b, a);
-    mpz_set(s2, s1);
-    mpz_set(s1, s0);
-    mpz_mul(tmp, q, s1);
-    mpz_sub(s0, s2, tmp);
-    if (mpz_cmp_ui(b, 1) == 0) {
-      mpz_fdiv_r(i, s0, p);
-      return;
-    }
-    mpz_fdiv_qr(q, a, a, b);
-    mpz_set(s2, s1);
-    mpz_set(s1, s0);
-    mpz_mul(tmp, q, s1);
-    mpz_sub(s0, s2, tmp);
-  }
-  mpz_fdiv_r(i, s0, p);
-}
-
-int main() {
-  mpz_t p;
-  mpz_init_set_ui(p, 997);
-  bool pass = true;
-  mpz_t inverse;
-  mpz_init(inverse);
-  mpz_t prod;
-  mpz_init(prod);
-  mpz_t r;
-  mpz_init(r);
-  for (int i = 1; i < 997; ++i) {
-    mpz_t mpzi;
-    mpz_init_set_ui(mpzi, i);
-    invert(inverse, mpzi, p);
-    mpz_mul(prod, inverse, mpzi);
-    mpz_fdiv_r(r, prod, p);
-    if (mpz_cmp_ui(r, 1) != 0) {
-      cout << "iteration " << i << " fail" << endl;
-      pass = false;
-    }
-  }
-  if (pass) {
-    cout << "PASS Inversion." << endl;
-  } else {
-    cout << "FAIL Inversion." << endl;
-  }
+  cout << "Inversion: " << pass << " correct results, " << fail << " errors." << endl;
   return 0;
 }
