@@ -8,6 +8,7 @@ This repository contains the following files:
 - [loop.c](loop.c) A C program implementing two simple algorithms to check weather a linked list ends in a loop, together with functions for creating, printing, and freeing lists.
 - [chomp.py](chomp.py) Object-oriented 2d chomp implementation using a general poset game engine.
 - [chomp-cell.png](chomp-cell.png) White chocolate block image for [chomp.py](chomp.py).
+- [ecc.cc](ecc.cc) Elliptic curve arithmetics.
 - [fibonacci.py](fibonacci.py) Five different functions to calculate Fibonacci numbers.
 - [cyclicsortedfindmax.py](cyclicsortedfindmax.py) Find maximum element in the cyclic permutation of a sorted array.
 - [random7.c](random7.c) Generate uniform discrete random variable on {0, 1, 2, 3, 4, 5, 6} given a sequence of those on {0, 1, 2, 3, 4}.
