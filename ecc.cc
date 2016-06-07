@@ -49,7 +49,7 @@ class Number {
  public:
   Number() = default;
   Number(const Number&) = default;
-  explicit Number(uint64_t value) : value_(value) {}
+  Number(uint64_t value) : value_(value) {}
 
   bool operator==(const Number& other) {
     return value_ == other.value_;
@@ -137,8 +137,8 @@ class Number {
         a -= b_shifted;
       }
     }
-    *quotient = Number(q);
-    *remainder = Number(a);
+    *quotient = q;
+    *remainder = a;
   }
 
  private:
@@ -151,8 +151,8 @@ class Number {
 class Element {
  public:
   Element() = default;
-  explicit Element(uint64_t value) : value_(value) {}
-  explicit Element(Number value) : value_(value) {}
+  Element(uint64_t value) : value_(value) {}
+  Element(Number value) : value_(value) {}
 
   bool operator==(const Element& other) {
     return value_ == other.value_;
@@ -163,7 +163,7 @@ class Element {
   }
 
   static Element negate(Element a, Number p) {
-    if (a == Element(0))
+    if (a == 0)
       return a;
     return Element(p - a.value_);
   }
@@ -185,7 +185,7 @@ class Element {
     Number b;
     Number q;
     Number::divide(p, a, &q, &b);
-    Element s0 = Element::negate(Element(q), p);
+    Element s0 = Element::negate(q, p);
     Element s1(one);
     Element s2;
     while (b != one) {
@@ -193,7 +193,7 @@ class Element {
       s2 = s1;
       s1 = s0;
       s0 = Element::add(
-          s2, Element::negate(Element(Number::mod(q * s1.value_, p)), p), p);
+          s2, Element::negate(Number::mod(q * s1.value_, p), p), p);
       if (a == one) {
         return s0;
       }
@@ -201,7 +201,7 @@ class Element {
       s2 = s1;
       s1 = s0;
       s0 = Element::add(
-          s2, Element::negate(Element(Number::mod(q * s1.value_, p)), p), p);
+          s2, Element::negate(Number::mod(q * s1.value_, p), p), p);
     }
     return s0;
   }
@@ -211,22 +211,35 @@ class Element {
   Number value_;
 };
 
+// Point on an elliptic curve y^2 = x^3 + ax + b over finite field of order p,
+// where p is prime.  a, b, p are not stored to save space.
+class Point {
+ public:
+  Point(Number x, Number y) : x_(x), y_(y) {}
+
+ private:
+  Number x_;
+  Number y_;
+};
+
 int main() {
   // Basic tests.
-  ASSERT(Element::add(Element(12), Element(20), Number(23)) == Element(9));
-  ASSERT(Element::multiply(Element(8), Element(9), Number(23)) == Element(3));
-  ASSERT(Number::mod(Number(2), Number(5)) == Number(2));
-  ASSERT(Number::mod(Number(7), Number(5)) == Number(2));
-  ASSERT(Number::mod(Number(12), Number(5)) == Number(2));
-  ASSERT(Number::mod(Number(17), Number(5)) == Number(2));
+  ASSERT(Element::add(12, 20, 23) == 9);
+  ASSERT(Element::multiply(8, 9, 23) == 3);
+  ASSERT(Number::mod(2, 5) == 2);
+  ASSERT(Number::mod(7, 5) == 2);
+  ASSERT(Number::mod(12, 5) == 2);
+  ASSERT(Number::mod(17, 5) == 2);
   Number q, r;
-  ASSERT((Number::divide(Number(2), Number(5), &q, &r), q == Number(0) && r == Number(2)));
-  ASSERT((Number::divide(Number(7), Number(5), &q, &r), q == Number(1) && r == Number(2)));
-  ASSERT((Number::divide(Number(12), Number(5), &q, &r), q == Number(2) && r == Number(2)));
-  ASSERT((Number::divide(Number(17), Number(5), &q, &r), q == Number(3) && r == Number(2)));
+  ASSERT((Number::divide(2, 5, &q, &r), q == 0 && r == 2));
+  ASSERT((Number::divide(7, 5, &q, &r), q == 1 && r == 2));
+  ASSERT((Number::divide(12, 5, &q, &r), q == 2 && r == 2));
+  ASSERT((Number::divide(17, 5, &q, &r), q == 3 && r == 2));
 
+  // Benchmark inversion in finite field.
+  /*
   //const Number p(29311);
-  const Number p(100057);
+  //const Number p(100057);
   //const Number p(15485863);
   //const Number p(982451653);
   const Element one(1);
@@ -240,5 +253,14 @@ int main() {
     }
   }
   cout << "Inversion: " << pass << " correct results, " << fail << " errors." << endl;
+  */
+
+  // Test elliptic curve operation.
+  // p=23, a=1, b=1:
+  Number p(23);
+  //ASSERT(Point(3, 10) + Point(9, 7) == Point(17, 20));
+  //ASSERT(2 * Point(3, 10) == Point(7, 12));
+  //ASSERT(Point(3, 10) + Point::Infinity() == Point(3, 10));
+  //ASSERT(Point(3, 10) + Point::invert(Point(9, 7)) == Point::Infinity());
   return 0;
 }
