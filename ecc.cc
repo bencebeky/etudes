@@ -36,15 +36,19 @@ Q_y = 4084 BC50388C 4E6FDFAB
 solution = 1387 56822DD5 FB093766
 */
 
+#define ASSERT(a) ((a) ? cout : (cout << "Assertion fails in line " << __LINE__ << endl))
+
 #include <iostream>
+#include <limits>
 
 using std::cout;
 using std::endl;
 
-// Large unsigned number.  No bounds/overflow check.
+// Large unsigned number.
 class Number {
  public:
   Number() = default;
+  Number(const Number&) = default;
   explicit Number(uint64_t value) : value_(value) {}
 
   bool operator==(const Number& other) {
@@ -55,11 +59,28 @@ class Number {
     return value_ != other.value_;
   }
 
+  bool operator>(const Number& other) {
+    return value_ > other.value_;
+  }
+
   bool operator>=(const Number& other) {
     return value_ >= other.value_;
   }
 
+  Number& operator<<=(int a) {
+    ASSERT(a==1);
+    value_ <<= a;
+    return *this;
+  }
+
+  Number& operator>>=(int a) {
+    ASSERT(a==1);
+    value_ >>= a;
+    return *this;
+  }
+
   Number& operator+=(const Number& other) {
+    ASSERT(std::numeric_limits<uint64_t>::max() - value_ >= other.value_);
     value_ += other.value_;
     return *this;
   }
@@ -69,8 +90,8 @@ class Number {
     return lhs;
   }
 
-  // Warning: no underflow check.
   Number& operator-=(const Number& other) {
+    ASSERT(value_ >= other.value_);
     value_ -= other.value_;
     return *this;
   }
@@ -80,32 +101,41 @@ class Number {
     return lhs;
   }
 
+  // Warning: no overflow check.
   friend Number operator*(Number lhs, const Number& rhs) {
     lhs.value_ *= rhs.value_;
     return lhs;
   }
 
-  // TODO Speed up.
   static Number mod(Number a, Number b) {
-    while (a.value_ < 0) {
-      a.value_ += b.value_;
-    }
-    while (a >= b) {
-      a.value_ -= b.value_;
+    ASSERT(b.value_>0);
+    Number b_shifted(b);
+    while (a >= b_shifted)
+      b_shifted <<= 1;
+    while (b_shifted != b) {
+      b_shifted >>= 1;
+      if (a >= b_shifted)
+        a -= b_shifted;
     }
     return a;
   }
 
-  // TODO Speed up.
   static void divide(Number a, Number b, Number* quotient, Number* remainder) {
+    ASSERT(b.value_>0);
     uint64_t q = 0;
-    while (a.value_ < 0) {
-      a.value_ += b.value_;
-      --q;
+    uint64_t p = 1;
+    Number b_shifted(b);
+    while (a >= b_shifted) {
+      p <<= 1;
+      b_shifted <<= 1;
     }
-    while (a >= b) {
-      a.value_ -= b.value_;
-      ++q;
+    while (p != 1) {
+      p >>= 1;
+      b_shifted >>= 1;
+      if (a >= b_shifted) {
+        q += p;
+        a -= b_shifted;
+      }
     }
     *quotient = Number(q);
     *remainder = Number(a);
@@ -117,7 +147,7 @@ class Number {
 
 // An element of the finite field of order p, where p is prime.  Represented by
 // an integer value in [0, p).  Behavior is undefined for values outside this
-// interval.
+// interval.  p is not stored to save space.
 class Element {
  public:
   Element() = default;
@@ -182,16 +212,19 @@ class Element {
 };
 
 int main() {
-  if (Element::add(Element(12), Element(20), Number(23)) == Element(9)) {
-    cout << "PASS Addition." << endl;
-  } else  {
-    cout << "FAIL Addition." << endl;
-  }
-  if (Element::multiply(Element(8), Element(9), Number(23)) == Element(3)) {
-    cout << "PASS Multiplication." << endl;
-  } else  {
-    cout << "FAIL Multiplication." << endl;
-  }
+  // Basic tests.
+  ASSERT(Element::add(Element(12), Element(20), Number(23)) == Element(9));
+  ASSERT(Element::multiply(Element(8), Element(9), Number(23)) == Element(3));
+  ASSERT(Number::mod(Number(2), Number(5)) == Number(2));
+  ASSERT(Number::mod(Number(7), Number(5)) == Number(2));
+  ASSERT(Number::mod(Number(12), Number(5)) == Number(2));
+  ASSERT(Number::mod(Number(17), Number(5)) == Number(2));
+  Number q, r;
+  ASSERT((Number::divide(Number(2), Number(5), &q, &r), q == Number(0) && r == Number(2)));
+  ASSERT((Number::divide(Number(7), Number(5), &q, &r), q == Number(1) && r == Number(2)));
+  ASSERT((Number::divide(Number(12), Number(5), &q, &r), q == Number(2) && r == Number(2)));
+  ASSERT((Number::divide(Number(17), Number(5), &q, &r), q == Number(3) && r == Number(2)));
+
   //const Number p(29311);
   const Number p(100057);
   //const Number p(15485863);
