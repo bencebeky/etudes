@@ -39,7 +39,6 @@ solution = 1387 56822DD5 FB093766
 #define ASSERT(a) ((a) ? cout : (cout << "Assertion fails in line " << __LINE__ << endl))
 
 #include <iostream>
-#include <limits>
 
 using std::cout;
 using std::endl;
@@ -51,36 +50,58 @@ class Number {
   Number(const Number&) = default;
   Number(uint64_t value) : value_(value) {}
 
-  bool operator==(const Number& other) {
+  static Number Infinity() {
+    return Number(0x8000000000000000);
+  }
+
+  bool is_infinity() const {
+    return value_ == 0x8000000000000000;
+  }
+
+  bool operator==(const Number& other) const {
     return value_ == other.value_;
   }
 
-  bool operator!=(const Number& other) {
+  bool operator!=(const Number& other) const {
     return value_ != other.value_;
   }
 
-  bool operator>(const Number& other) {
+  bool operator>(const Number& other) const {
+    ASSERT(!is_infinity());
+    ASSERT(!other.is_infinity());
     return value_ > other.value_;
   }
 
-  bool operator>=(const Number& other) {
+  bool operator<(const Number& other) const {
+    ASSERT(!is_infinity());
+    ASSERT(!other.is_infinity());
+    return value_ < other.value_;
+  }
+
+  bool operator>=(const Number& other) const {
+    ASSERT(!is_infinity());
+    ASSERT(!other.is_infinity());
     return value_ >= other.value_;
   }
 
   Number& operator<<=(int a) {
+    ASSERT(!is_infinity());
     ASSERT(a==1);
     value_ <<= a;
     return *this;
   }
 
   Number& operator>>=(int a) {
+    ASSERT(!is_infinity());
     ASSERT(a==1);
     value_ >>= a;
     return *this;
   }
 
   Number& operator+=(const Number& other) {
-    ASSERT(std::numeric_limits<uint64_t>::max() - value_ >= other.value_);
+    ASSERT(!is_infinity());
+    ASSERT(!other.is_infinity());
+    ASSERT(0x7fffffffffffffff - value_ >= other.value_);
     value_ += other.value_;
     return *this;
   }
@@ -91,6 +112,8 @@ class Number {
   }
 
   Number& operator-=(const Number& other) {
+    ASSERT(!is_infinity());
+    ASSERT(!other.is_infinity());
     ASSERT(value_ >= other.value_);
     value_ -= other.value_;
     return *this;
@@ -101,13 +124,27 @@ class Number {
     return lhs;
   }
 
+  static Number multiply(Number a, Number b, Number p) {
+    ASSERT(!a.is_infinity());
+    ASSERT(!b.is_infinity());
+    ASSERT(!p.is_infinity());
+    ASSERT(a < p);
+    ASSERT(b < p);
+    return mod(a.value_ * b.value_, p);
+  }
+
+
   // Warning: no overflow check.
   friend Number operator*(Number lhs, const Number& rhs) {
+    ASSERT(!lhs.is_infinity());
+    ASSERT(!rhs.is_infinity());
     lhs.value_ *= rhs.value_;
     return lhs;
   }
 
   static Number mod(Number a, Number b) {
+    ASSERT(!a.is_infinity());
+    ASSERT(!b.is_infinity());
     ASSERT(b.value_>0);
     Number b_shifted(b);
     while (a >= b_shifted)
@@ -121,6 +158,8 @@ class Number {
   }
 
   static void divide(Number a, Number b, Number* quotient, Number* remainder) {
+    ASSERT(!a.is_infinity());
+    ASSERT(!b.is_infinity());
     ASSERT(b.value_>0);
     uint64_t q = 0;
     uint64_t p = 1;
@@ -141,18 +180,35 @@ class Number {
     *remainder = a;
   }
 
+  static bool bitwise_and_is_zero(Number a, Number b) {
+    ASSERT(!a.is_infinity());
+    ASSERT(!b.is_infinity());
+    if (a.value_ & b.value_)
+      return false;
+    return true;
+  }
+
  private:
   uint64_t value_;
 };
 
-// An element of the finite field of order p, where p is prime.  Represented by
-// an integer value in [0, p).  Behavior is undefined for values outside this
-// interval.  p is not stored to save space.
+// An element of the finite field of order p, where p is prime, or special value
+// Infinity.  Represented by a Number corresponding to integer value in [0, p),
+// or special value Infinity.  Behavior is undefined for other values.
+// p is not stored to save space.
 class Element {
  public:
   Element() = default;
   Element(uint64_t value) : value_(value) {}
   Element(Number value) : value_(value) {}
+
+  static Element Infinity() {
+    return Element(Number::Infinity());
+  }
+
+  bool is_infinity() {
+    return value_.is_infinity();
+  }
 
   bool operator==(const Element& other) {
     return value_ == other.value_;
@@ -163,19 +219,39 @@ class Element {
   }
 
   static Element negate(Element a, Number p) {
+    ASSERT(!a.is_infinity());
+    ASSERT(a.value_ < p);
     if (a == 0)
       return a;
     return Element(p - a.value_);
   }
 
   static Element add(Element a, Element b, Number p) {
+    ASSERT(!a.is_infinity());
+    ASSERT(!b.is_infinity());
+    ASSERT(!p.is_infinity());
+    ASSERT(a.value_ < p);
+    ASSERT(b.value_ < p);
     Number sum = a.value_ + b.value_;
     if (sum >= p) sum -= p;
     return Element(sum);
   }
 
+  static Element subtract(Element a, Element b, Number p) {
+    return add(a, negate(b, p), p);
+  }
+
+  static Element divide(Element a, Element b, Number p) {
+    return multiply(a, invert(b, p), p);
+  }
+
   static Element multiply(Element a, Element b, Number p) {
-    return Element(Number::mod(a.value_ * b.value_, p));
+    ASSERT(!a.is_infinity());
+    ASSERT(!b.is_infinity());
+    ASSERT(!p.is_infinity());
+    ASSERT(a.value_ < p);
+    ASSERT(b.value_ < p);
+    return Number::multiply(a.value_, b.value_, p);
   }
 
   static Element invert(Element i, Number p) {
@@ -193,7 +269,7 @@ class Element {
       s2 = s1;
       s1 = s0;
       s0 = Element::add(
-          s2, Element::negate(Number::mod(q * s1.value_, p), p), p);
+          s2, Element::negate(Number::multiply(Number::mod(q, p), s1.value_, p), p), p);
       if (a == one) {
         return s0;
       }
@@ -201,11 +277,10 @@ class Element {
       s2 = s1;
       s1 = s0;
       s0 = Element::add(
-          s2, Element::negate(Number::mod(q * s1.value_, p), p), p);
+          s2, Element::negate(Number::multiply(Number::mod(q, p), s1.value_, p), p), p);
     }
     return s0;
   }
-
 
  private:
   Number value_;
@@ -215,15 +290,83 @@ class Element {
 // where p is prime.  a, b, p are not stored to save space.
 class Point {
  public:
-  Point(Number x, Number y) : x_(x), y_(y) {}
+  Point(Element x, Element y) : x_(x), y_(y) {}
+
+  static Point Infinity() {
+    return Point(Element::Infinity(), 0);
+  }
+
+  bool is_infinity() {
+    return x_.is_infinity();
+  }
+
+  bool operator==(const Point& other) {
+    return x_ == other.x_ && y_ == other.y_;
+  }
+
+  static Point multiply(Point A, Point B, Number p, Number a) {
+    if (A.is_infinity())
+      return B;
+    if (B.is_infinity())
+      return A;
+    if (A.x_ == B.x_) {
+      if (Element::add(A.y_, B.y_, p) == 0)
+        return Infinity();
+      Element s(Element::divide(
+          Element::add(Element::multiply(3, Element::multiply(A.x_, A.x_, p), p), a, p),
+          Element::multiply(2, A.y_, p), p));
+      Element x(Element::subtract(
+          Element::multiply(s, s, p),
+          Element::multiply(2, A.x_, p), p));
+      Element y(Element::negate(Element::add(A.y_,
+          Element::multiply(s, Element::subtract(x, A.x_, p), p), p), p));
+      return Point(x, y);
+    }
+    Element s(Element::divide(
+        Element::subtract(A.y_, B.y_, p),
+        Element::subtract(A.x_, B.x_, p),
+        p));
+    Element x(Element::subtract(
+        Element::multiply(s, s, p),
+        Element::add(A.x_, B.x_, p),
+        p));
+    Element y(Element::negate(Element::add(
+        A.y_,
+        Element::multiply(s, Element::subtract(x, A.x_, p), p),
+        p), p));
+    return Point(x, y);
+  }
+
+  static Point power(Point A, Number exponent, Number p, Number a) {
+    Point answer(Point::Infinity());
+    if (exponent == 0)
+      return answer;
+    Number q(1);
+    while (true) {
+      if (!Number::bitwise_and_is_zero(exponent, q)) {
+        answer = multiply(answer, A, p, a);
+        exponent -= q;
+        if (exponent == 0)
+          return answer;
+      }
+      q <<= 1;
+      A = multiply(A, A, p, a);
+    }
+  }
+
+  static Point invert(Point A, Number p) {
+    return Point(A.x_, Element::negate(A.y_, p));
+  }
 
  private:
-  Number x_;
-  Number y_;
+  Element x_;
+  Element y_;
 };
 
 int main() {
   // Basic tests.
+  ASSERT(Number::Infinity().is_infinity());
+  ASSERT(!Number(42).is_infinity());
   ASSERT(Element::add(12, 20, 23) == 9);
   ASSERT(Element::multiply(8, 9, 23) == 3);
   ASSERT(Number::mod(2, 5) == 2);
@@ -255,12 +398,18 @@ int main() {
   cout << "Inversion: " << pass << " correct results, " << fail << " errors." << endl;
   */
 
-  // Test elliptic curve operation.
+  // Test elliptic curve operations.
   // p=23, a=1, b=1:
   Number p(23);
-  //ASSERT(Point(3, 10) + Point(9, 7) == Point(17, 20));
-  //ASSERT(2 * Point(3, 10) == Point(7, 12));
-  //ASSERT(Point(3, 10) + Point::Infinity() == Point(3, 10));
-  //ASSERT(Point(3, 10) + Point::invert(Point(9, 7)) == Point::Infinity());
+  Number a(1);
+  ASSERT(Point::multiply(Point(3, 10), Point(9, 7), p, a) == Point(17, 20));
+  ASSERT(Point::multiply(Point(9, 7), Point(3, 10), p, a) == Point(17, 20));
+  ASSERT(Point::power(Point(3, 10), 2, p, a) == Point(7, 12));
+  ASSERT(Point::power(Point(3, 10), 3, p, a) == Point::multiply(Point(7, 12), Point(3, 10), p, a));
+  ASSERT(Point::multiply(Point(3, 10), Point::Infinity(), p, a) == Point(3, 10));
+  ASSERT(Point::multiply(Point::Infinity(), Point(3, 10), p, a) == Point(3, 10));
+  ASSERT(Point::multiply(Point(3, 10), Point::invert(Point(3, 10), p), p, a) == Point::Infinity());
+  ASSERT(Point::multiply(Point::invert(Point(9, 7), p), Point(9, 7), p, a) == Point::Infinity());
+  ASSERT(Point::invert(Point::Infinity(), p) == Point::Infinity());
   return 0;
 }
