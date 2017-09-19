@@ -19,3 +19,5 @@ This repository contains the following files:
 - [signal.c](signal.c) Minimal example of signal handling in C.
 - [lightsout.py](lightsout.py) Solver for lights out puzzle.
 - [square1](square1) Solution guite to Square 1 puzzle.
+- [hue](hue.py), [hue1](hue1.py) Helpers for certain color organizing Android
+  game apps.
