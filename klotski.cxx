@@ -1,158 +1,140 @@
 /* Klotski solver. */
-#include <string>
-#include <cassert>
 #include <algorithm>
-#include <vector>
-#include <utility>
-#include <set>
-#include <map>
-#include <queue>
+#include <array>
+#include <cassert>
 #include <iostream>
+#include <map>
+#include <set>
+#include <utility>
+#include <vector>
 
-using std::string;
-using std::vector;
+using std::array;
 using std::cout;
 using std::endl;
-using std::set;
-using std::queue;
 using std::map;
-
-class Storage {
- public:
-  const string* Store(string&& key) {
-    set<string>::iterator hint = strings_.lower_bound(key);
-    const string& answer = (*hint == key) ? *hint : *strings_.insert(hint, std::move(key));
-    return &answer;
-  }
-
- private:
-  set<string> strings_;
-};
+using std::set;
+using std::vector;
 
 class Solution {
  public:
-  void GenerateGraph(const string& initial);
+  using State = array<char,20>;
+
+  void GenerateGraph(State initial);
 
  private:
-  bool IsLeft(uint8_t index);
-  bool IsRight(uint8_t index);
-  bool IsTop(uint8_t index);
-  bool IsBottom(uint8_t index);
-  uint8_t ToLeft(uint8_t index);
-  uint8_t ToRight(uint8_t index);
-  uint8_t ToTop(uint8_t index);
-  uint8_t ToBottom(uint8_t index);
+  enum Direction {
+    LEFT,
+    RIGHT,
+    TOP,
+    BOTTOM
+  };
+
+  bool IsEdge(Direction direction, size_t index) {
+    switch (direction) {
+      case Direction::LEFT:
+        return index%4 == 0;
+      case Direction::RIGHT:
+        return index%4 == 3;
+      case Direction::TOP:
+        return index < 4;
+      case Direction::BOTTOM:
+        return index > 15;
+    }
+    return true;
+  }
+
+  size_t Move(Direction direction, size_t index) {
+    switch (direction) {
+      case Direction::LEFT:
+        return index - 1;
+      case Direction::RIGHT:
+        return index + 1;
+      case Direction::TOP:
+        return index - 4;
+      case Direction::BOTTOM:
+        return index + 4;
+    }
+    return 0;
+  }
 
   void AddNeighbors();
 
-  map<const string*, set<const string*>> graph_;
-  queue<const string*> queue_;
+  map<State, set<State>> graph_;
+  set<State> states_to_explore_;
   set<char> labels_;
-  Storage storage_;
 };
 
-void Solution::GenerateGraph(const string& initial) {
+void Solution::GenerateGraph(State initial) {
   assert(graph_.empty());
-  assert(queue_.empty());
+  assert(states_to_explore_.empty());
   assert(labels_.empty());
+  cout << "Generating graph..." << endl;
   for (char c : initial) {
     // " " is a special label denoting empty space.
     if (c != ' ') {
       labels_.insert(c);
     }
   }
-  cout << "Generating graph..." << endl;
-  queue_.push(&initial);
-  while (!queue_.empty())
+  states_to_explore_.insert(initial);
+  while (!states_to_explore_.empty())
     AddNeighbors();
   cout << graph_.size() << " vertices found." << endl;
 }
 
-bool Solution::IsLeft(uint8_t index) {
-  return index%4 == 0;
-}
-
-bool Solution::IsRight(uint8_t index) {
-  return index%4 == 3;
-}
-
-bool Solution::IsTop(uint8_t index) {
-  return index < 4;
-}
-
-bool Solution::IsBottom(uint8_t index) {
-  return index > 15;
-}
-
-uint8_t Solution::ToLeft(uint8_t index) {
-  return index - 1;
-}
-
-uint8_t Solution::ToRight(uint8_t index) {
-  return index + 1;
-}
-
-uint8_t Solution::ToTop(uint8_t index) {
-  return index - 4;
-}
-
-uint8_t Solution::ToBottom(uint8_t index) {
-  return index + 4;
-}
-
 void Solution::AddNeighbors() {
-  const string* vertex = queue_.front();
-  queue_.pop();
+  set<State>::iterator explore_iterator = states_to_explore_.begin();
+  State current = *explore_iterator;
+  states_to_explore_.erase(explore_iterator);
+  map<State, set<State>>::iterator graph_iterator;
+  bool success;
+  std::tie(graph_iterator, success) =
+      graph_.insert(std::make_pair(current, set<State>({})));
+  if (!success)
+    return;
+  // Cycle through blocks.
   for (char label : labels_) {
-    vector<uint8_t> indices;
-    for (uint8_t i = 0; i < vertex->size(); ++i) {
-      if ((*vertex)[i] == label)
+    vector<size_t> indices;
+    for (size_t i = 0; i < current.size(); ++i) {
+      if (current[i] == label)
         indices.push_back(i);
     }
-    // Try moving left.
-    bool canmove = true;
-    for (uint8_t i : indices) {
-      if (IsLeft(i)) {
-        canmove = false;
-        break;
+    // Cycle through possible directions.
+    for (Direction direction : {LEFT, RIGHT, TOP, BOTTOM}) {
+      bool canmove = true;
+      for (size_t i : indices) {
+        if (IsEdge(direction, i)) {
+          canmove = false;
+          break;
+        }
+        char neighbor = current[Move(direction, i)];
+        if (neighbor != ' ' && neighbor != label) {
+          canmove = false;
+          break;
+        }
       }
-      char neighbor = (*vertex)[ToLeft(i)];
-      if (neighbor != ' ' && neighbor != label) {
-        canmove = false;
-        break;
-      }
-    }
-    if (canmove)
-      cout << label << " can be moved to the left.";
-    // Try moving right.
-    canmove = true;
-    for (uint8_t i : indices) {
-      if (IsRight(i)) {
-        canmove = false;
-        break;
-      }
-      char neighbor = (*vertex)[ToRight(i)];
-      if (neighbor != ' ' && neighbor != label) {
-        canmove = false;
-        break;
-      }
-    }
-    if (canmove) {
-      string newvertex(*vertex);
-      for (uint8_t i : indices)
-        newvertex[i] = ' ';
-      for (uint8_t i : indices)
-        newvertex[ToRight(i)] = label;
-      const string* newvertexptr = storage_.Store(std::move(newvertex));
-      queue_.push(newvertexptr);
-      // Push to graph_.
-      // Avoid cycles.
+      if (!canmove)
+        continue;
+      State newstate(current);
+      for (size_t i : indices)
+        newstate[i] = ' ';
+      for (size_t i : indices)
+        newstate[Move(direction, i)] = label;
+      graph_iterator->second.insert(newstate);
+      if (graph_.find(newstate) != graph_.end())
+        continue;
+      states_to_explore_.insert(newstate);
     }
   }
 }
 
 int main() {
   Solution solution;
-  solution.GenerateGraph("000000000000112 112 ");
+  Solution::State initial({
+      '0', '1', '1', '2',
+      '0', '1', '1', '3',
+      '4', '5', '6', '7',
+      '4', '8', '6', '7',
+      ' ', ' ', '9', '9'});
+  solution.GenerateGraph(initial);
   return 0;
 }
