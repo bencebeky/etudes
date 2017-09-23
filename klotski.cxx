@@ -89,8 +89,7 @@ void Solution::AddNeighbors() {
   bool success;
   std::tie(graph_iterator, success) =
       graph_.insert(std::make_pair(current, set<State>({})));
-  if (!success)
-    return;
+  assert(success);
   // Cycle through blocks.
   for (char label : labels_) {
     vector<size_t> indices;
