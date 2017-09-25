@@ -23,6 +23,9 @@ class Solution {
   // or ' ' if the cell is empty.
   using State = array<char,20>;
 
+  // Fill |labels_|.
+  void GatherLabels(State initial);
+
   // Generate |graph_|.
   void GenerateGraph(State initial);
 
@@ -85,18 +88,22 @@ class Solution {
   set<char> labels_;
 };
 
-void Solution::GenerateGraph(State initial) {
-  assert(graph_.empty());
-  assert(states_to_explore_.empty());
+void Solution::GatherLabels(State initial) {
   assert(labels_.empty());
-  cout << "Generating graph..." << endl;
   for (char c : initial) {
     // ' ' is a special label denoting empty space.
     if (c != ' ') {
       labels_.insert(c);
     }
   }
+}
+
+void Solution::GenerateGraph(State initial) {
+  assert(graph_.empty());
+  assert(states_to_explore_.empty());
+  cout << "Generating graph..." << endl;
   Normalize(&initial);
+  GatherLabels(initial);
   states_to_explore_.insert(initial);
   while (!states_to_explore_.empty())
     AddNeighbors();
