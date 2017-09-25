@@ -17,8 +17,13 @@ using std::vector;
 
 class Solution {
  public:
+  // State of the board, that is, position of blocks.
+  // Each index corresponds to a cell on the board.
+  // Each element is the label of the block that occupies that cell,
+  // or ' ' if the cell is empty.
   using State = array<char,20>;
 
+  // Generate |graph_|.
   void GenerateGraph(State initial);
 
  private:
@@ -29,6 +34,8 @@ class Solution {
     BOTTOM
   };
 
+  // Is the cell corresponding to |index| on the |direction| edge of the board,
+  // that is, one of the |direction|-most cells.
   bool IsEdge(Direction direction, size_t index) {
     switch (direction) {
       case Direction::LEFT:
@@ -43,6 +50,8 @@ class Solution {
     return true;
   }
 
+  // Return the index corresponding to the cell that is adjacent to |index|
+  // and is to |direction| from it.
   size_t Move(Direction direction, size_t index) {
     switch (direction) {
       case Direction::LEFT:
@@ -57,9 +66,15 @@ class Solution {
     return 0;
   }
 
+  // Pop an element of |states_to_explore_| and add it together with its edges
+  // to |graph_|, and add all its not yet explored neighbors to
+  // |states_to_explore_|.
   void AddNeighbors();
 
+  // Undirected graph with states as vertices and valid moves as edges.
+  // Every vertex is mapped to its set of neighbors.
   map<State, set<State>> graph_;
+
   set<State> states_to_explore_;
   set<char> labels_;
 };
@@ -70,7 +85,7 @@ void Solution::GenerateGraph(State initial) {
   assert(labels_.empty());
   cout << "Generating graph..." << endl;
   for (char c : initial) {
-    // " " is a special label denoting empty space.
+    // ' ' is a special label denoting empty space.
     if (c != ' ') {
       labels_.insert(c);
     }
