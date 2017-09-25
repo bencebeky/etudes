@@ -34,6 +34,12 @@ class Solution {
     BOTTOM
   };
 
+  // Relabel blocks in |state| such that they are encountered in increasing
+  // order.  This is possible because congruent blocks in the same orientation
+  // are indistinguishable.  This normalization can significantly cut down on
+  // computational cost and memory usage.
+  void Normalize(State* state) {}
+
   // Is the cell corresponding to |index| on the |direction| edge of the board,
   // that is, one of the |direction|-most cells.
   bool IsEdge(Direction direction, size_t index) {
@@ -90,6 +96,7 @@ void Solution::GenerateGraph(State initial) {
       labels_.insert(c);
     }
   }
+  Normalize(&initial);
   states_to_explore_.insert(initial);
   while (!states_to_explore_.empty())
     AddNeighbors();
@@ -133,6 +140,7 @@ void Solution::AddNeighbors() {
         newstate[i] = ' ';
       for (size_t i : indices)
         newstate[Move(direction, i)] = label;
+      Normalize(&newstate);
       graph_iterator->second.insert(newstate);
       if (graph_.find(newstate) != graph_.end())
         continue;
