@@ -38,10 +38,47 @@ class Solution {
   };
 
   // Relabel blocks in |state| such that they are encountered in increasing
-  // order.  This is possible because congruent blocks in the same orientation
-  // are indistinguishable.  This normalization can significantly cut down on
-  // computational cost and memory usage.
-  void Normalize(State* state) {}
+  // order.  This is permissible because congruent blocks in the same
+  // orientation are indistinguishable.  This normalization can significantly
+  // cut down on computational cost and memory usage.
+  void Normalize(State* state) {
+    set<char>::const_iterator l = labels_.begin();
+    for (size_t i = 0; i < state->size(); ++i) {
+      // At this point, the first i-1 cells of |state| have labels that appear
+      // in increasing order.
+      // |*l| is the smallest label that has not been seen yet.
+      char c = (*state)[i];
+      if (c == ' ') {
+        continue;
+      }
+      if (c < *l) {
+        continue;
+      }
+      if (c == *l) {
+        ++l;
+        if (l == labels_.end()) {
+          break;
+        }
+        continue;
+      }
+      // The label |c| is encountered, but it is larger than |*l|.
+      // Swap |c| and |*l| labels.  None of them can appear among the first
+      // |i-1| cells.
+      for (size_t j = i; j < state->size(); ++j) {
+        if ((*state)[j] == c) {
+          (*state)[j] = *l;
+          continue;
+        }
+        if ((*state)[j] == *l) {
+          (*state)[j] = c;
+        }
+      }
+      ++l;
+      if (l == labels_.end()) {
+        break;
+      }
+    }
+  }
 
   // Is the cell corresponding to |index| on the |direction| edge of the board,
   // that is, one of the |direction|-most cells.
@@ -102,8 +139,8 @@ void Solution::GenerateGraph(State initial) {
   assert(graph_.empty());
   assert(states_to_explore_.empty());
   cout << "Generating graph..." << endl;
-  Normalize(&initial);
   GatherLabels(initial);
+  Normalize(&initial);
   states_to_explore_.insert(initial);
   while (!states_to_explore_.empty())
     AddNeighbors();
