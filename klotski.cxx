@@ -245,12 +245,31 @@ void Print(const State& initial, const Solution& solution) {
 }
 
 int main() {
+  /*
+  // Set 1 Level 15
   State initial({
       '0', '1', '1', '2',
       '0', '1', '1', '3',
       '4', '5', '6', '7',
       '4', '8', '6', '7',
       ' ', ' ', '9', '9'});
+  */
+  /*
+  // Set 1 Level 18
+  State initial({
+      '1', '2', '2', '3',
+      '1', '2', '2', '4',
+      '5', '6', '7', '8',
+      '5', '6', '7', '9',
+      ' ', 'a', 'a', ' '});
+  */
+  // Set 1 Level 19
+  State initial({
+      '1', '2', '2', '3',
+      '1', '2', '2', '3',
+      '4', '5', '6', '7',
+      '8', '9', '9', 'a',
+      '8', ' ', ' ', 'a'});
   Graph graph = GenerateGraph(initial);
   Solution solution = Solve(graph);
   Print(initial, solution);
