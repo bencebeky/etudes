@@ -2,7 +2,7 @@
 
 ### Études, just like in music, are exercises for the sake of practice that might not even sound bad in the end.
 
-This repository contains the following files:
+This repository contains the following files and directories:
 
 - [COPYING](COPYING) GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007.
 - [loop.c](loop.c) A C program implementing two simple algorithms to check weather a linked list ends in a loop, together with functions for creating, printing, and freeing lists.
@@ -22,3 +22,5 @@ This repository contains the following files:
 - [hue](hue.py), [hue1](hue1.py) Helpers for certain color organizing Android
   game apps.
 - [asm](asm) Fibonacci function in Assembly called from C++.
+- [resnet](resnet) Different residual neural network implementations applied to
+  the CIFAR10 database.

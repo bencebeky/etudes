@@ -6,7 +6,7 @@ _Z3fibi:
         # Put first argument in EAX.  This is the iteration count.
         movl	%eax, -4(%rsp)
         # ECX and EDX are consecutive elements of the Fibonacci sequence.
-        # Initialize then to (0, 1).  Return value will be in EDX.
+        # Initialize them to (0, 1).  Return value will be in EDX.
         xor     %ecx, %ecx
         movl    $1, %edx
         # Iterate.
