@@ -4,6 +4,14 @@ description: Fail and print diff if yaml files are not formatted correctly
 runs:
   using: composite
   steps:
+    - name: Make sure tree is clean
+      run: |
+        if git diff --quiet; then
+          exit 0
+        fi
+        echo "Error: working tree is not clean"
+        exit 1
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
@@ -24,5 +32,6 @@ runs:
         echo "or apply the following diff manually:"
         echo
         git diff | cat
+        # Clean tree for subsequent steps
         git checkout -- .
         exit 1
