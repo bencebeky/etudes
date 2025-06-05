@@ -1,19 +1,9 @@
 name: Autoformat yaml files
 description: Fail and print diff if yaml files are not formatted correctly
 
-inputs:
-  secret-token:
-    description: "Secret token"
-    required: true
-
 runs:
   using: composite
   steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.PAT_TOKEN }}
-
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
@@ -34,4 +24,5 @@ runs:
         echo "or apply the following diff manually:"
         echo
         git diff | cat
+        git checkout -- .
         exit 1
