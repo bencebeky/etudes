@@ -1,0 +1,4 @@
+AccessModifierOffset: -1
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpaceAfterTemplateKeyword: false
